@@ -1,0 +1,68 @@
+diff -ruN /root/xen/xen-original/xen/arch/x86/hvm/ioreq.c /root/xen/xen-modded/xen/arch/x86/hvm/ioreq.c
+--- /root/xen/xen-original/xen/arch/x86/hvm/ioreq.c	2018-11-29 14:04:11.000000000 +0000
++++ /root/xen/xen-modded/xen/arch/x86/hvm/ioreq.c	2020-06-06 20:20:32.327834558 +0100
+@@ -418,7 +418,7 @@
+     return found;
+ }
+ 
+-static void hvm_remove_ioreq_gfn(struct hvm_ioreq_server *s, bool buf)
++/*static void hvm_remove_ioreq_gfn(struct hvm_ioreq_server *s, bool buf)
+ 
+ {
+     struct domain *d = s->target;
+@@ -431,7 +431,7 @@
+                                    page_to_mfn(iorp->page), 0) )
+         domain_crash(d);
+     clear_page(iorp->va);
+-}
++}*/
+ 
+ static int hvm_add_ioreq_gfn(struct hvm_ioreq_server *s, bool buf)
+ {
+@@ -685,8 +685,8 @@
+     if ( s->enabled )
+         goto done;
+ 
+-    hvm_remove_ioreq_gfn(s, false);
+-    hvm_remove_ioreq_gfn(s, true);
++    //hvm_remove_ioreq_gfn(s, false);
++    //hvm_remove_ioreq_gfn(s, true);
+ 
+     s->enabled = true;
+ 
+diff -ruN /root/xen/xen-original/xen/arch/x86/pv/dom0_build.c /root/xen/xen-modded/xen/arch/x86/pv/dom0_build.c
+--- /root/xen/xen-original/xen/arch/x86/pv/dom0_build.c	2018-11-29 14:04:11.000000000 +0000
++++ /root/xen/xen-modded/xen/arch/x86/pv/dom0_build.c	2020-06-06 20:20:32.327834558 +0100
+@@ -278,6 +278,24 @@
+     return page;
+ }
+ 
++static void print_offsets_for_vmi(void)
++{
++    struct domain d;
++    struct vcpu v;
++    struct p2m_domain pd;
++    unsigned long pa_v, pa_d, pa_pd;
++    pa_v = __pa(&v);
++    pa_d = __pa(&d);
++    pa_pd = __pa(&pd);
++    printk("domain_list is located at pa=%lX\n", __pa(domain_list));
++    printk("domid %lX max_vcpus %lX vcpu %lX next_in_list %lX p2m %lX\n", __pa(&(d.domain_id))-pa_d,
++        __pa(&(d.max_vcpus))-pa_d, __pa(&(d.vcpu))-pa_d, __pa(&(d.next_in_list))-pa_d,
++        __pa(&(d.arch.p2m))-pa_d);
++    printk("vcpu arch %lX user_regs %lX rip %lX rax %lX\n", __pa(&(v.arch))-pa_v, __pa(&(v.arch.user_regs))-pa_v,
++       __pa(&(v.arch.user_regs.rip))-pa_v, __pa(&(v.arch.user_regs.rax))-pa_v);
++    printk("EPTP %lX\n", __pa(&(pd.ept.eptp))-pa_pd);
++}
++
+ int __init dom0_construct_pv(struct domain *d,
+                              const module_t *image,
+                              unsigned long image_headroom,
+@@ -925,6 +943,7 @@
+ 
+     v->is_initialised = 1;
+     clear_bit(_VPF_down, &v->pause_flags);
+
++    print_offsets_for_vmi();
+ out:
+  if ( elf_check_broken(&elf) )
